@@ -51,13 +51,13 @@ for resource in $GLOBALRESOURCES; do
     echo "Exporting resource: ${resource}" >/dev/stderr
     kubectl get --export -o=json "$resource" | jq --sort-keys \
         'del(
-          .items[].metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
           .items[].metadata.annotations."control-plane.alpha.kubernetes.io/leader",
-          .items[].metadata.uid,
-          .items[].metadata.selfLink,
-          .items[].metadata.resourceVersion,
+          .items[].metadata.annotations."kubectl.kubernetes.io/last-applied-configuration",
           .items[].metadata.creationTimestamp,
-          .items[].metadata.generation
+          .items[].metadata.generation,
+          .items[].metadata.resourceVersion,
+          .items[].metadata.selfLink,
+          .items[].metadata.uid
       )' | python -c 'import sys, yaml, json; yaml.safe_dump(json.load(sys.stdin), sys.stdout, default_flow_style=False)' >"$GIT_REPO_PATH/$GIT_PREFIX_PATH/${resource}.yaml"
 done
 
@@ -90,6 +90,7 @@ for namespace in $NAMESPACES; do
             .metadata.selfLink,
             .metadata.uid,
             .spec.clusterIP,
+            .spec.replicas,
             .status
         )' | python -c 'import sys, yaml, json; yaml.safe_dump(json.load(sys.stdin), sys.stdout, default_flow_style=False)' >"$GIT_REPO_PATH/$GIT_PREFIX_PATH/${namespace}/${name}.${type}.yaml"
         done
