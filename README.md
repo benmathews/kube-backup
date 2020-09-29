@@ -1,6 +1,6 @@
 kube-backup
 ===========
-[![Docker Repository on Quay](https://quay.io/repository/digidentity/kube-backup/status "Docker Repository on Quay")](https://quay.io/repository/digidentity/kube-backup)
+[![Docker Repository on Quay](https://quay.io/repository/plange/kube-backup/status "Docker Repository on Quay")](https://quay.io/repository/plange/kube-backup)
 [![Docker Repository on Docker Hub](https://img.shields.io/docker/automated/ptlange/kube-backup.svg "Docker Repository on Docker Hub")](https://hub.docker.com/r/ptlange/kube-backup/)
 
 Quick 'n dirty kubernetes state backup script, designed to be ran as kubernetes Job. Think of it like [RANCID](http://www.shrubbery.net/rancid/) for kubernetes.
@@ -16,7 +16,7 @@ Define the following environment parameters:
   * `GIT_PREFIX_PATH` - Path to the subdirectory in your repository. Default: `.`
   * `NAMESPACES` - List of namespaces to export. Default: all
   * `GLOBALRESOURCES` - List of global resource types to export. Default: `namespace`
-  * `RESOURCETYPES` - List of resource types to export. Default: `ingress deployment configmap svc rc ds thirdpartyresource networkpolicy statefulset storageclass cronjob`. Notice that `Secret` objects are intentionally not exported by default (see [git-crypt section](#git-crypt) for details).
+  * `RESOURCETYPES` - List of resource types to export. Default: `ingress deployment configmap svc rc ds networkpolicy statefulset storageclass cronjob`. Notice that `Secret` objects are intentionally not exported by default (see [git-crypt section](#git-crypt) for details).
   * `GIT_USERNAME` - Display name of git user. Default: `kube-backup`
   * `GIT_EMAIL` - Email address of git user. Default: `kube-backup@example.com`
   * `GIT_BRANCH` - Use a specific git branch . Default: `master`
@@ -24,9 +24,9 @@ Define the following environment parameters:
   * `GITCRYPT_PRIVATE_KEY` - Path to private gpg key for git-crypt. See [git-crypt section](#git-crypt) for details. Default: `/secrets/gpg-private.key`
   * `GITCRYPT_SYMMETRIC_KEY` - Path to shared symmetric key for git-crypt. See [git-crypt section](#git-crypt). Default: `/secrets/symmetric.key`
 
-Chose one of two authentication mechanisms:
+Choose one of two authentication mechanisms:
 
-  * If using AWS CodeCommit and policy-based access from AWS, modify your cluster configuration to provide GitPull and GitPush access for that CodeCommit repo to your cluster. If using `kops`, the configuration will look something like this:
+  * When using AWS CodeCommit and policy-based access from AWS, modify your cluster configuration to provide GitPull and GitPush access for that CodeCommit repo to your cluster. If using `kops`, the configuration will look something like this:
 
   ```yaml
     additionalPolicies:
@@ -46,7 +46,7 @@ Chose one of two authentication mechanisms:
   NOTE: in this deployment, the ssh volume and secret are not present.
 
 
-  * If using a different repository (GitHub, BitBucket, etc.), mount a configured ssh directory in `/backup/.ssh` with the following files:
+  * When using a different repository (GitHub, BitBucket, etc.), mount a configured ssh directory in `/backup/.ssh` with the following files:
 
     * `known_hosts` - Preloaded with SSH host key of `$GIT_REPO` host.
     * `id_rsa` - SSH private key of user allowed to push to `$GIT_REPO`.
@@ -68,16 +68,16 @@ Optional:
 
 git-crypt
 ---------
-For security reason `Secret` objects are not exported by default. However there is a possibility to store them safely using [git-crypt project](https://github.com/AGWA/git-crypt).
+For security reasons `Secret` objects are not exported by default. However there is a possibility to store them safely using the [git-crypt project](https://github.com/AGWA/git-crypt).
 
 #### Prerequisites
-Your repository have to be already initialized with git-crypt. Minimal configuration is listed below. For details and full information see [using git-crypt](https://github.com/AGWA/git-crypt#using-git-crypt).
+Your repository has to be already initialized with git-crypt. Minimal configuration is listed below. For details and full information see [using git-crypt](https://github.com/AGWA/git-crypt#using-git-crypt).
 
 ```
 cd repo
 git-crypt init
 cat <<EOF > .gitattributes
-secret.yaml filter=git-crypt diff=git-crypt
+*.secret.yaml filter=git-crypt diff=git-crypt
 .gitattributes !filter !diff
 EOF
 git-crypt add-gpg-user <USER_ID>
@@ -87,11 +87,11 @@ git commit -a -m "initialize git-crypt"
 
 Optional:
   * You may choose any subdirectory for storing .gitattributes file (useful when using `GIT_PREFIX_PATH`).
-  * You may encrypt additional files than secret.yaml. Add additional line before .gitattribute filter. You may also use wildcard `*` to encrypt all files within chosen directory.
+  * You may encrypt additional files other than secret.yaml. Add additional lines before the .gitattribute filter. You may also use wildcard `*` to encrypt all files within the directory.
 
 #### Enable git-crypt
 To enable encryption feature:
-  * Set pod environment variable GITCRYPT_ENABLE to `true`
+  * Set pod environment variable `GITCRYPT_ENABLE` to `true`
     ```
     spec:
       containers:
@@ -145,72 +145,97 @@ To enable encryption feature:
 
 Result
 ------
-All configured resources will be exported into a directory tree structure in `kind: List` YAML format following a `$namespace/$resourcetype.yaml` file structure.
+All configured resources will be exported into a directory tree structure in YAML format following a `$namespace/$name.$type.yaml` file structure.
 
 ```
 .
-├── default
-│   ├── configmap.yaml
-│   ├── cronjob.yaml
-│   ├── deployment.yaml
-│   ├── ds.yaml
-│   ├── ingress.yaml
-│   ├── networkpolicy.yaml
-│   ├── petset.yaml
-│   ├── rc.yaml
-│   ├── statefulset.yaml
-│   ├── storageclass.yaml
-│   ├── svc.yaml
-│   └── thirdpartyresource.yaml
 ├── kube-system
-│   ├── configmap.yaml
-│   ├── cronjob.yaml
-│   ├── deployment.yaml
-│   ├── ds.yaml
-│   ├── ingress.yaml
-│   ├── networkpolicy.yaml
-│   ├── petset.yaml
-│   ├── rc.yaml
-│   ├── statefulset.yaml
-│   ├── storageclass.yaml
-│   ├── svc.yaml
-│   └── thirdpartyresource.yaml
+│   ├── attachdetach-controller.serviceaccounts.yaml
+│   ├── canal-config.configmap.yaml
+│   ├── canal.daemonset.yaml
+│   ├── canal.serviceaccounts.yaml
+│   ├── certificate-controller.serviceaccounts.yaml
+│   ├── cronjob-controller.serviceaccounts.yaml
+│   ├── daemon-set-controller.serviceaccounts.yaml
+│   ├── default.serviceaccounts.yaml
+│   ├── deployment-controller.serviceaccounts.yaml
+│   ├── disruption-controller.serviceaccounts.yaml
+│   ├── dns-controller.deployment.yaml
+│   ├── dns-controller.serviceaccounts.yaml
+│   ├── endpoint-controller.serviceaccounts.yaml
+│   ├── generic-garbage-collector.serviceaccounts.yaml
+│   ├── horizontal-pod-autoscaler.serviceaccounts.yaml
+│   ├── job-controller.serviceaccounts.yaml
+│   ├── kube-backup-gpg.secret.yaml
+│   ├── kube-backup.serviceaccounts.yaml
+│   ├── kube-backup-ssh.secret.yaml
+│   ├── kube-dns-autoscaler.configmap.yaml
+│   ├── kube-dns-autoscaler.deployment.yaml
+│   ├── kube-dns-autoscaler.serviceaccounts.yaml
+│   ├── kube-dns.deployment.yaml
+│   ├── kube-dns.serviceaccounts.yaml
+│   ├── kube-dns.service.yaml
+│   ├── kubelet.service.yaml
+│   ├── kube-prometheus-exporter-kube-controller-manager.service.yaml
+│   ├── kube-prometheus-exporter-kube-dns.service.yaml
+│   ├── kube-prometheus-exporter-kube-etcd.service.yaml
+│   ├── kube-prometheus-exporter-kube-scheduler.service.yaml
+│   ├── kube-proxy.serviceaccounts.yaml
+│   ├── kube-state-backup-new.cronjob.yaml
+│   ├── kube-sysctl.daemonset.yaml
+│   ├── letsencrypt-prod.secret.yaml
+│   ├── namespace-controller.serviceaccounts.yaml
+│   ├── node-controller.serviceaccounts.yaml
+│   ├── openvpn-ccd.configmap.yaml
+│   ├── openvpn-crl.configmap.yaml
+│   ├── openvpn.deployment.yaml
+│   ├── openvpn-ingress.service.yaml
+│   ├── openvpn-pki.secret.yaml
+│   ├── openvpn-portmapping.configmap.yaml
+│   ├── openvpn-settings.configmap.yaml
+│   ├── persistent-volume-binder.serviceaccounts.yaml
+│   ├── pod-garbage-collector.serviceaccounts.yaml
+│   ├── replicaset-controller.serviceaccounts.yaml
+│   ├── replication-controller.serviceaccounts.yaml
+│   ├── resourcequota-controller.serviceaccounts.yaml
+│   ├── route53-config.secret.yaml
+│   ├── service-account-controller.serviceaccounts.yaml
+│   ├── service-controller.serviceaccounts.yaml
+│   ├── statefulset-controller.serviceaccounts.yaml
+│   ├── sysctl-options.configmap.yaml
+│   ├── tiller-deploy.deployment.yaml
+│   ├── tiller-deploy.service.yaml
+│   ├── tiller.serviceaccounts.yaml
+│   └── ttl-controller.serviceaccounts.yaml
 ├── prd
-│   ├── configmap.yaml
-│   ├── cronjob.yaml
-│   ├── deployment.yaml
-│   ├── ds.yaml
-│   ├── ingress.yaml
-│   ├── networkpolicy.yaml
-│   ├── petset.yaml
-│   ├── rc.yaml
-│   ├── statefulset.yaml
-│   ├── storageclass.yaml
-│   ├── svc.yaml
-│   └── thirdpartyresource.yaml
+│   ├── initdb.configmap.yaml
+│   ├── example-app.deployment.yaml
+│   ├── example-app.ingress.yaml
+│   ├── example-app.secret.yaml
+│   ├── example-app.service.yaml
+│   ├── postgres-admin.secret.yaml
+│   ├── postgresql.deployment.yaml
+│   ├── postgresql.service.yaml
+│   ├── postgres.secret.yaml
+│   ├── prd.example.com.secret.yaml
+│   ├── redis.service.yaml
+│   └── redis-standalone.rc.yaml
 └── staging
-    ├── configmap.yaml
-    ├── cronjob.yaml
-    ├── deployment.yaml
-    ├── ds.yaml
-    ├── ingress.yaml
-    ├── networkpolicy.yaml
-    ├── petset.yaml
-    ├── rc.yaml
-    ├── statefulset.yaml
-    ├── storageclass.yaml
-    ├── svc.yaml
-    └── thirdpartyresource.yaml
+    ├── initdb.configmap.yaml
+    ├── example-app.deployment.yaml
+    ├── example-app.ingress.yaml
+    ├── example-app.secret.yaml
+    ├── example-app.service.yaml
+    ├── postgres-admin.secret.yaml
+    ├── postgresql.deployment.yaml
+    ├── postgresql.service.yaml
+    ├── postgres.secret.yaml
+    ├── staging.example.com.secret.yaml
+    ├── redis.service.yaml
+    └── redis-standalone.rc.yaml
 
-4 directories, 48 files
+3 directories, 80 files
 ```
 
-Caveat
-------
-This is using a kubernetes alpha feature ([cronjobs](https://kubernetes.io/docs/user-guide/jobs/#handling-pod-and-container-failures)) and hasn't been tested for idempotency/concurrent behaviour.  See the cronjob [documentation](https://kubernetes.io/docs/user-guide/cron-jobs/) for details.
-
-If your kubernetes cluster runs under version 1.5 or less, `spec.successfulJobsHistoryLimit` and `spec.failedJobsHistoryLimit` will be ignored as they've been introduced in version 1.6. In this case, running an export every 10 minutes will quickly run up your Job (and therefor Pod) count, causing a linear increase in master server load. A fix for this is to deploy a [blunt instrument](job-cleanup.yaml) to clean the old kube-backup jobs.
-
-License
 -------
 This project is MIT licensed.

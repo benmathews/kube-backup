@@ -1,29 +1,17 @@
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: kube-backup-reader
 rules:
-- apiGroups: ["*"]
-  resources: [
-    "configmaps",
-    "cronjobs",
-    "deployments",
-    "daemonsets",
-    "ingresses",
-    "namespaces",
-    "networkpolicies",
-    "replicationcontrollers",
-    "services",
-    "statefulsets",
-    "storageclasses",
-    "thirdpartyresources"
-  ]
+- apiGroups:
+  - '*'
+  resources:
+  - '*'
   verbs: ["get", "list"]
-
 ---
 
 kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: kube-backup
   namespace: default
